@@ -1,0 +1,49 @@
+# Virtual environments
+venv/
+*/venv/
+*.venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Database files
+*.db
+*.sqlite3
+
+# Docker-related files
+docker-compose.yml.bak
+*.dockerignore
+
+# IDE and editor files
+.idea/
+.vscode/
+*.sublime-workspace
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Build artifacts
+dashboard_service/dist/
+dashboard_service/node_modules/
+dashboard_service/build/
+dashboard_service/.vite/
+
+# Sensitive data
+.env
+*.env
+*.env.local
+*.env.development.local
+*.env.test.local
+*.env.production.local

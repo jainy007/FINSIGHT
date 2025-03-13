@@ -1,0 +1,136 @@
+Notes: Building the Market Data Ingestion Service
+---------------------------------------------------
+
+---------
+Objective
+---------
+Build a microservice to ingest historical and live stock market data using FastAPI, fetch data from Yahoo Finance via yfinance, and store it in a PostgreSQL database.
+This is the first component of a larger financial insights platform that will include sentiment analysis, predictive modeling, and a dashboard.
+
+------------
+Environment
+------------
+Date: March 12, 2025.
+Hardware: Laptop
+OS: Ubuntu 22.4.
+Tools: Python 3.10, PostgreSQL, FastAPI, Uvicorn, SQLAlchemy, yfinance.
+
+-----------------
+Steps Completed
+-----------------
+
+1. Project Setup
+-----------------
+Directory with a subfolder market_data_service/.
+
+Virtual Environment:
+
+    python -m venv venv
+    source venv/bin/activate
+
+Dependencies:
+
+    pip install fastapi uvicorn sqlalchemy psycopg2-binary requests yfinance
+
+2. Folder Structure
+--------------------
+FINSIGHT/
+├── market_data_service/
+│   ├── __init__.py
+│   ├── main.py        # FastAPI app
+│   ├── models.py      # SQLAlchemy model for stock data
+│   ├── database.py    # Database connection setup
+│   ├── ingestion.py   # Data fetching and saving logic
+│   └── README.md      # Documentation
+├── venv/
+
+
+3. PostgreSQL Configuration
+----------------------------
+Installation: PostgreSQL was installed (e.g., sudo apt install postgresql on Linux).
+Initial Issue: Encountered Peer authentication failed for user "postgres" when running psql -U postgres.
+Cause: Default peer authentication required OS user to match DB user.
+
+Fix:
+Logged in as postgres OS user:
+
+    sudo -u postgres psql
+
+Set a password:
+    sql >> ALTER USER postgres WITH PASSWORD 'your_password';
+
+Edited pg_hba.conf (e.g., /etc/postgresql/14/main/pg_hba.conf):
+
+Changed "local all postgres peer" to "local all postgres md5"
+
+Reloaded PostgreSQL:
+
+    sudo systemctl reload postgresql
+
+Database Creation:
+    sql >> CREATE DATABASE market_data;
+
+
+4. Running the Service
+-----------------------
+Command:
+
+    uvicorn main:app --reload
+
+Output:
+--------------------------------------------------------------------------------------------------------
+INFO:     Will watch for changes in these directories: ['/home/jmishra3/FINSIGHT/market_data_service']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [707486] using StatReload
+INFO:     Started server process [707488]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+---------------------------------------------------------------------------------------------------------
+
+
+6. Troubleshooting
+----------------------
+Error: psycopg2.errors.InvalidSchemaName: schema "np" does not exist.
+Cause: NumPy types (np.float64) in yfinance data weren’t converted to Python types, confusing PostgreSQL.
+Fix: Added float() conversions in save_stock_data.
+Resolution: After fixing, the service ran without errors.
+
+7. Testing
+------------
+Endpoint Test:
+
+curl http://127.0.0.1:8000/ingest/AAPL
+Response: {"message":"Data for AAPL ingested successfully"}.
+
+Database Query:
+
+>> psql -U postgres -h localhost -d market_data -W
+>> SELECT * FROM stock_data LIMIT 5;
+
+Result:
+
+id | symbol |      timestamp      |     open_price     |     high_price     |     low_price     |    close_price     |  volume  
+----+--------+---------------------+--------------------+--------------------+-------------------+--------------------+----------
+ 1 | AAPL   | 2025-03-11 00:00:00 | 223.80999755859375 | 225.83999633789062 | 217.4499969482422 | 220.83999633789062 | 76087700
+(1 row)
+
+--------------
+Key Outcomes
+---------------
+Functionality: The service fetches daily stock data for a given ticker (e.g., "AAPL") and stores it in PostgreSQL.
+Database: stock_data table created with columns matching the StockData model.
+Error Handling: Basic validation for empty data from yfinance.
+Scalability: PostgreSQL ensures robust storage; FastAPI provides a lightweight, async-capable API.
+
+----------------
+Lessons Learned
+----------------
+Authentication: Configuring PostgreSQL’s pg_hba.conf to use md5 instead of peer for password-based access.
+Data Types: Converting NumPy types to Python natives is critical for database compatibility.
+Debugging: Reading tracebacks (e.g., InvalidSchemaName) helped pinpoint the issue.
+
+--------------------
+Next Steps (Pending)
+--------------------
+Move to Sentiment Analysis on Financial News when you say "next step".
+Future enhancements: Caching (Redis), real-time streaming, containerization (Docker), and deployment (Kubernetes).

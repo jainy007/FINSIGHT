@@ -1,0 +1,69 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  redis:
+    image: redis:6.2-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  market-data:
+    build:
+      context: ./market_data_service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+
+  sentiment:
+    build:
+      context: ./sentiment_service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+
+  predictive:
+    build:
+      context: ./predictive_service
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+
+  dashboard-backend:
+    build:
+      context: ./dashboard_service
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    depends_on:
+      - redis
+      - predictive
+    environment:
+      - REDIS_HOST=redis
+      - JWT_SECRET=your-secure-secret-key-here
+
+  dashboard-frontend:
+    build:
+      context: ./dashboard_service
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - dashboard-backend
+      - market-data
+
+volumes:
+  redis-data:
