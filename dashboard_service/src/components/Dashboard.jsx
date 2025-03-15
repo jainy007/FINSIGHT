@@ -1,4 +1,3 @@
-// dashboard_service/src/components/Dashboard.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import StockChart from './StockChart';
@@ -22,13 +21,6 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    window.consoleMessages = [];
-    const originalLog = console.log;
-    console.log = function (...args) {
-      window.consoleMessages.push(args.join(' '));
-      originalLog.apply(console, args);
-    };
-
     console.log('Socket connecting to:', 'http://localhost:8000/socket.io');
     socket.on('connect', () => {
       console.log('Socket connected!');
@@ -52,6 +44,7 @@ const Dashboard = () => {
       });
     });
 
+    // Cleanup on unmount
     return () => {
       socket.disconnect();
     };
@@ -60,9 +53,6 @@ const Dashboard = () => {
   const fetchData = async () => {
     console.log('fetchData called with ticker:', ticker);
     try {
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
       const stockResponse = await axios.get(`http://127.0.0.1:5000/db/stock/${ticker}`, { timeout: 15000 });
       console.log('Stock Data Response:', stockResponse.data);
       setStockData(stockResponse.data);
@@ -71,7 +61,7 @@ const Dashboard = () => {
       console.log('Sentiment Data Response:', sentimentResponse.data);
       setSentimentData(sentimentResponse.data);
 
-      const predictionResponse = await axios.get(`http://127.0.0.1:8002/predict/${ticker}`, { headers, timeout: 15000 });
+      const predictionResponse = await axios.get(`http://127.0.0.1:5000/predict/${ticker}`, { timeout: 15000 });
       console.log('Prediction Response:', predictionResponse.data);
       setPredictions(predictionResponse.data);
     } catch (error) {
