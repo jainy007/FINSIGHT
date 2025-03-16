@@ -70,75 +70,6 @@ npm install date-fns
 npm run build
 ```
 
-### Manually start microservices
-
-1. **Redis Server**
-
-```
-redis-server --port 6379
-```
-```
----- Verify : 
-        $ redis-cli ping
-        PONG
-```
-
-2. **Market Data Service**
-```
-cd market_data_service
-source ../venv/bin/activate
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
-
-3. **Sentiment Service**
-```
-cd sentiment_service
-source ../venv/bin/activate
-uvicorn main:app --host 0.0.0.0 --port 8001
-```
-
---- Verify
-```
-    curl http://localhost:8001/analyze/AAPL
-```    
-Expected: {"symbol":"AAPL","sentiment_score":0.5,...} (or similar)
-
-4. **Predictive Service**
-
-```
-cd predictive_service
-python main.py
-```
-
---- Verify
-```
-    curl http://localhost:5000/predict/AAPL
-```
-Expected: {"symbol":"AAPL","predicted_close":220.92349243164062}
-
-5. **Dashboard Service** BACKEND
-
-```
-cd dashboard_service
-uvicorn main:app --host 0.0.0.0 --port 8002
-```
---- Verify
-```
-    curl http://localhost:8002/health
-```
-Expected: {"status":"healthy"}
-
-6. **Dashboard Service** FRONTEND
-
-```
-npm run dev
-```
-
---- Verify
-
-- Open `http://localhost:5173` in a browser
-- Log in with testuser/testpassword (or sign up).
-- After logging in, you should be redirected to the dashboard (/dashboard), where you can enter a ticker (e.g., AAPL) and fetch data
 
 --- Automated Verify
 ```
@@ -152,7 +83,7 @@ python test_dashboard_service_cache_auth.py
 
 1. From root, build and run all services
 ```
-docker-compose up --build
+docker compose up --build
 ```
 
 2. Run the test
