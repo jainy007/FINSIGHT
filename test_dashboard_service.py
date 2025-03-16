@@ -9,6 +9,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import os
+import threading
 from webdriver_manager.chrome import ChromeDriverManager
 
 # Configuration
@@ -23,18 +24,58 @@ PREDICTIVE_PATH = os.path.join(BASE_DIR, "predictive_service")
 DASHBOARD_PATH = os.path.join(BASE_DIR, "dashboard_service")
 DASHBOARD_URL = "http://localhost:5173"
 
-def start_service(cmd, cwd, name):
-    """Start a service in a subprocess."""
+SERVICE_HEALTH_URLS = {
+    "Market Data": "http://127.0.0.1:8000/ingest/AAPL",
+    "Sentiment": "http://127.0.0.1:8001/analyze/AAPL",
+    "Predictive": "http://127.0.0.1:5000/predict/AAPL",
+    "Dashboard": "http://localhost:5173"
+}
+
+def start_service(cmd, cwd, name, health_url):
+    """Start a service in a subprocess and wait for it to be ready."""
     process = subprocess.Popen(
         cmd,
         cwd=cwd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True
+        text=True,
+        env=os.environ.copy()
     )
     print(f"Starting {name} service...")
-    time.sleep(10)  # Wait for service to initialize
+
+    # Log stdout and stderr in real-time
+    def log_output():
+        while process.poll() is None:
+            stdout_line = process.stdout.readline()
+            stderr_line = process.stderr.readline()
+            if stdout_line:
+                print(f"{name} stdout: {stdout_line.strip()}")
+            if stderr_line:
+                print(f"{name} stderr: {stderr_line.strip()}")
+
+    log_thread = threading.Thread(target=log_output)
+    log_thread.start()
+
+    # Wait for the service to be ready
+    if not wait_for_service(health_url):
+        raise RuntimeError(f"{name} service failed to start")
+    
     return process
+
+def wait_for_service(url, retries=10, delay=5):
+    """Wait for a service to be available by checking its health endpoint."""
+    for attempt in range(retries):
+        try:
+            response = requests.get(url, timeout=5)
+            if response.status_code == 200:
+                print(f"Service at {url} is ready!")
+                return True
+            else:
+                print(f"Attempt {attempt+1}/{retries}: {url} returned status {response.status_code}")
+        except requests.RequestException as e:
+            print(f"Attempt {attempt+1}/{retries}: Failed to reach {url} - {e}")
+        time.sleep(delay)
+    return False
 
 def check_api_health(url, retries=3, delay=10):
     """Check if an API endpoint is accessible with retries."""
@@ -52,13 +93,12 @@ def check_api_health(url, retries=3, delay=10):
 
 def test_dashboard_service(headless=True):
     driver = None
-    market_process = start_service(MARKET_SERVICE_CMD, MARKET_PATH, "Market Data")
-    sentiment_process = start_service(SENTIMENT_SERVICE_CMD, SENTIMENT_PATH, "Sentiment")
-    predictive_process = start_service(PREDICTIVE_SERVICE_CMD, PREDICTIVE_PATH, "Predictive")
-    dashboard_process = start_service(DASHBOARD_SERVICE_CMD, DASHBOARD_PATH, "Dashboard")
-
     try:
-        time.sleep(5)  # Additional wait for dashboard to serve
+        # Start all services
+        market_process = start_service(MARKET_SERVICE_CMD, MARKET_PATH, "Market Data", SERVICE_HEALTH_URLS["Market Data"])
+        sentiment_process = start_service(SENTIMENT_SERVICE_CMD, SENTIMENT_PATH, "Sentiment", SERVICE_HEALTH_URLS["Sentiment"])
+        predictive_process = start_service(PREDICTIVE_SERVICE_CMD, PREDICTIVE_PATH, "Predictive", SERVICE_HEALTH_URLS["Predictive"])
+        dashboard_process = start_service(DASHBOARD_SERVICE_CMD, DASHBOARD_PATH, "Dashboard", SERVICE_HEALTH_URLS["Dashboard"])
 
         print("Checking API health...")
         assert check_api_health("http://127.0.0.1:8000/ingest/AAPL"), "Market Data API unavailable"
@@ -112,12 +152,11 @@ def test_dashboard_service(headless=True):
 
         print("Dashboard test passed!")
 
-        # If not in headless mode, pause until the user closes the browser
         if not headless:
             print("Test complete. Chrome window is open. Close the browser window to continue.")
             try:
                 while True:
-                    driver.title  # Check if the browser is still open
+                    driver.title
                     time.sleep(1)
             except:
                 print("Browser closed by user.")
@@ -136,10 +175,7 @@ def test_dashboard_service(headless=True):
         print("All services stopped.")
 
 if __name__ == "__main__":
-    # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Test the Financial Insights Dashboard service.")
     parser.add_argument('--headless', action='store_true', help="Run the test in headless mode")
     args = parser.parse_args()
-
-    # Run the test with the specified headless mode
     test_dashboard_service(headless=args.headless)

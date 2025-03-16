@@ -5,25 +5,41 @@ from sqlalchemy.orm import Session
 from models import StockData, SentimentData
 import pickle
 import os
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 MODEL_PATH = "xgboost_model.pkl"
 
 def fetch_training_data(db: Session, symbol: str):
     # Fetch stock data
     stock_query = db.query(StockData).filter(StockData.symbol == symbol).order_by(StockData.timestamp).all()
-    stock_df = pd.DataFrame([(s.timestamp, s.close_price, s.volume) for s in stock_query], 
-                            columns=["timestamp", "close_price", "volume"])
-    
+    if not stock_query:
+        logger.warning(f"No stock data found for {symbol}")
+        raise ValueError(f"No stock data found for {symbol}")
+    stock_data = [(float(s.timestamp.timestamp()), float(s.close_price), int(s.volume)) for s in stock_query]
+    stock_df = pd.DataFrame(stock_data, columns=["timestamp", "close_price", "volume"])
+    logger.info(f"Stock DF dtypes: {stock_df.dtypes}")
+    logger.info(f"Stock DF sample: {stock_df.head().to_dict()}")
+
     # Fetch sentiment data
     sentiment_query = db.query(SentimentData).filter(SentimentData.symbol == symbol).all()
-    sentiment_df = pd.DataFrame([(s.timestamp, s.sentiment_score) for s in sentiment_query], 
-                                columns=["timestamp", "sentiment_score"])
-    
+    if not sentiment_query:
+        logger.warning(f"No sentiment data found for {symbol}")
+        raise ValueError(f"No sentiment data found for {symbol}")
+    sentiment_data = [(float(s.timestamp.timestamp()), float(s.sentiment_score)) for s in sentiment_query]
+    sentiment_df = pd.DataFrame(sentiment_data, columns=["timestamp", "sentiment_score"])
+    logger.info(f"Sentiment DF dtypes: {sentiment_df.dtypes}")
+    logger.info(f"Sentiment DF sample: {sentiment_df.head().to_dict()}")
+
     # Merge on timestamp (approximate nearest match)
     df = pd.merge_asof(stock_df.sort_values("timestamp"), 
                        sentiment_df.sort_values("timestamp"), 
                        on="timestamp", 
                        direction="nearest")
+    logger.info(f"Merged DF dtypes: {df.dtypes}")
+    logger.info(f"Merged DF sample: {df.head().to_dict()}")
     return df
 
 def train_model(db: Session, symbol: str):

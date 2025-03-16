@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 @aiocache.cached()
-async def fetch_stock_data(symbol: str, period: str = "5d"):
+async def fetch_stock_data(symbol: str, period: str = "100d"):
     logger.debug(f"Fetching stock data for {symbol} with period {period}")
     stock = yf.Ticker(symbol)
     data = stock.history(period=period)
