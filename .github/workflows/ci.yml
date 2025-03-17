@@ -26,12 +26,12 @@ jobs:
 
       - name: Build Docker images
         run: |
-          docker-compose build --build-arg BUILDKIT_INLINE_CACHE=1
+          docker compose build --build-arg BUILDKIT_INLINE_CACHE=1
           docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache .
 
       - name: Start services
         run: |
-          docker-compose up -d
+          docker compose up -d
           sleep 30
 
       - name: Ingest data
@@ -69,4 +69,4 @@ jobs:
       - name: Stop services
         if: always()
         run: |
-          docker-compose down
+          docker compose down
