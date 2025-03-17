@@ -13,6 +13,7 @@ sudo apt-get install nodejs npm
 ----keep node version >=18
 sudo apt-get install containerd docker.io
 sudo apt-get install docker-compose-plugin
+sudo apt install libxcb-cursor0 libxkbcommon-x11-0 libxcb-xinerama0 libxcb-xinput0
 ```
 
 ### Install and Start Redis:
@@ -62,6 +63,7 @@ pip install -r sentiment_service/requirements.txt
 pip install -r predictive_service/requirements.txt
 pip install -r dashboard_service/requirements.txt
 pip install requests selenium termcolor redis webdriver-manager
+pip install PySide6 matplotlib requests
 ```
 --- if you have GPU
 ```
