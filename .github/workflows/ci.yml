@@ -23,7 +23,7 @@ jobs:
       - name: Start services
         run: |
           docker compose up -d
-          sleep 30
+          sleep 30  # Give services time to start
 
       - name: Ingest data
         run: |
@@ -34,21 +34,32 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y chromium-browser chromium-chromedriver
-          [ ! -f /usr/bin/google-chrome ] && sudo ln -s /usr/bin/chromium-browser /usr/bin/google-chrome || echo "google-chrome link exists"
+          # Ensure Chrome binary is at a known location
+          if [ ! -f /usr/bin/google-chrome ]; then
+            sudo ln -sf /usr/lib/chromium-browser/chromium-browser /usr/bin/google-chrome
+          fi
+          # Verify installations
+          /usr/bin/google-chrome --version
+          /usr/lib/chromium-browser/chromedriver --version
           pip install selenium requests urllib3==1.26.6 charset-normalizer==2.0.12
 
       - name: Run headless browser test
         run: |
           python -c "from selenium import webdriver
           from selenium.webdriver.common.by import By
+          from selenium.webdriver.chrome.service import Service
           from selenium.webdriver.chrome.options import Options
           from selenium.webdriver.support.ui import WebDriverWait
           from selenium.webdriver.support import expected_conditions as EC
+          # Configure Chrome options
           options = Options()
+          options.binary_location = '/usr/lib/chromium-browser/chromium-browser'  # Explicit binary path
           options.add_argument('--headless')
           options.add_argument('--no-sandbox')
           options.add_argument('--disable-dev-shm-usage')
-          driver = webdriver.Chrome(options=options)
+          # Specify chromedriver path explicitly
+          service = Service(executable_path='/usr/lib/chromium-browser/chromedriver')
+          driver = webdriver.Chrome(service=service, options=options)
           driver.get('http://localhost:5173')
           WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.TAG_NAME, 'input'))).send_keys('AAPL')
           WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.TAG_NAME, 'button'))).click()
