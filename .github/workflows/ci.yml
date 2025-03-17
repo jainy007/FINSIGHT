@@ -31,8 +31,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y chromium-browser chromium-chromedriver
-          pip install selenium
-
+          sudo ln -s /usr/bin/chromium-browser /usr/bin/google-chrome  # Link for compatibility
+          pip install selenium requests urllib3==1.26.6 charset-normalizer==2.0.12
+  
       - name: Run headless browser test
         run: |
           python -c "from selenium import webdriver
@@ -53,7 +54,7 @@ jobs:
           prediction = driver.find_element(By.ID, 'stock-data').text.split(' ')[2]
           print(f'Predicted closing price: {prediction}')
           driver.quit()"
-
+          
       - name: Stop services
         if: always()
         run: |
