@@ -13,6 +13,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
       - name: Build Docker images
         run: |
           docker compose build
@@ -31,9 +34,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y chromium-browser chromium-chromedriver
-          sudo ln -s /usr/bin/chromium-browser /usr/bin/google-chrome  # Link for compatibility
+          [ ! -f /usr/bin/google-chrome ] && sudo ln -s /usr/bin/chromium-browser /usr/bin/google-chrome || echo "google-chrome link exists"
           pip install selenium requests urllib3==1.26.6 charset-normalizer==2.0.12
-  
+
       - name: Run headless browser test
         run: |
           python -c "from selenium import webdriver
@@ -54,8 +57,12 @@ jobs:
           prediction = driver.find_element(By.ID, 'stock-data').text.split(' ')[2]
           print(f'Predicted closing price: {prediction}')
           driver.quit()"
-          
+
+  cleanup:
+    runs-on: self-hosted
+    needs: test
+    if: always()  # Runs even if test job fails
+    steps:
       - name: Stop services
-        if: always()
         run: |
-          docker-compose down
+          docker compose down
